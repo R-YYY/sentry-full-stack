@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Gocyber-world/gocyber-base/response"
 	"github.com/getsentry/sentry-go"
@@ -13,15 +14,25 @@ func GetIndex(c *gin.Context) {
 }
 
 func GetSentry(c *gin.Context) {
-	// ctx := context.Background()
-	// span := sentry.StartSpan(ctx, "doWork", sentry.TransactionName("testtttttttt"))
-	// span.Finish()
-	hub := sentry.GetHubFromContext(c.Request.Context())
-	headers := c.Request.Header
-	fmt.Println(headers)
-	fmt.Println(hub)
-	// hub.Scope().SetTag("Trace ID", )
-	// hub.Scope().SetTransaction("/sentry")
+	span := StartSpanFromGinContext(c, "sentry test")
+	for i := 0; i < 5; i++ {
+		childOp := span.StartChild(fmt.Sprintf("slow op: %v", i))
+		time.Sleep(100 * time.Millisecond)
+		childOp.Finish()
+	}
+	// traceId, _ := hex.DecodeString(c.Request.Header.Get("traceId"))
+	// span.TraceID = sentry.TraceID(traceId)
+	sentry.ContinueFromHeaders(c.Request.Header.Get("sentry-trace"), "")
+	span.Finish()
+	response.OkWithData(span.TraceID, c)
+	fmt.Println(span.TraceID)
+	sentry.Flush(time.Second)
+}
 
-	response.OkWithData("sentry", c)
+func StartSpanFromGinContext(c *gin.Context, op string) *sentry.Span {
+	span, ok := c.Value("_sentry_gin_span").(*sentry.Span)
+	if ok && span != nil {
+		return span.StartChild(op, sentry.ContinueFromHeaders(c.Request.Header.Get("sentry-trace"), ""))
+	}
+	return sentry.StartSpan(c, op, sentry.ContinueFromHeaders(c.Request.Header.Get("sentry-trace"), ""))
 }

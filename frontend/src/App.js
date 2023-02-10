@@ -1,44 +1,47 @@
 import logo from './logo.svg';
 import './App.css';
 import * as Sentry from "@sentry/browser";
-import { BrowserTracing } from "@sentry/tracing";
-
-Sentry.init({
-  dsn: "https://a9bab2e92f48490484543f621223ee89@o4504648733032448.ingest.sentry.io/4504648959852544",
-
-  integrations:[
-    new BrowserTracing({
-      tracePropagationTargets: ['localhost'],
-    })
-  ],
-
-  // Set tracesSampleRate to 1.0 to capture 100%
-  // of transactions for performance monitoring.
-  // We recommend adjusting this value in production
-  tracesSampleRate: 1.0,
-});
+import { uuid4 } from '@sentry/utils';
 
 function App() {
   const sentryTest = () => {
-    const transaction = Sentry.startTransaction({ name: "test-transaction" });
-    const span = transaction.startChild({ op: "sentryTest" }); // This function returns a Span
-    // functionCallX
+    // const existingTransaction = Sentry.getCurrentHub().getScope()?.getTransaction();
+    // const transaction = existingTransaction ??
+    //   Sentry.startTransaction({ name: `local test 2`});
+    // for (let i = 0; i < 5; i++) {
+    //   const span = transaction.startChild({ op: `span ${i}` });
+    //   const child = span.startChild({op : `child ${i}-${i}`});
+    //   span.finish();
+    //   child.finish();
+    // }
+    // transaction.finish()
 
-    fetch('http://localhost:8000/sentry',{
+    const traceId = uuid4()
+    const existingTransaction = Sentry.getCurrentHub().getScope()?.getTransaction();
+    const transaction = existingTransaction ?? Sentry.startTransaction({ name: `并列`});
+    transaction.traceId = traceId
+    const span = transaction.startChild({ op: `span 1` });
+    const child = span.startChild({op : `child 1-1`});
+    child.finish();
+    fetch('http://localhost:8000/sentry', {
       method: 'get',
       headers: {
-        'sentry-trace': span.toTraceparent(),
-        // 'baggage': serializeBaggage(span.getBaggage())
-      }
+        "sentry-trace" : transaction.toTraceparent(),
+        "trace-id" : traceId,
+      },
     }).then((data) => {
       console.log('Success!');
     }).catch((err) => {
       console.log('Something bad happened');
-    }).finally(_ => {
-      span.finish(); // Remember that only finished spans will be sent with the transaction
-      transaction.finish(); // Finishing the transaction will send it to Sentry
+    }).finally( _ => {
+      span.finish()
+      transaction.finish()
     })
+    const t = Sentry.startTransaction({ name: `another`});
+    t.traceId = traceId
+    t.finish()
   }
+
   return (
     <div className="App">
       <header className="App-header">
