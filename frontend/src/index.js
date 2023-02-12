@@ -12,7 +12,7 @@ export const globalStorage = {
 }
 
 Sentry.init({
-  dsn: "https://264656342b284cceab7bc7eff390ff26@o4504648733032448.ingest.sentry.io/4504667145371648",
+  dsn: "",
   integrations:[
     new BrowserTracing({
       tracePropagationTargets: ['localhost'],

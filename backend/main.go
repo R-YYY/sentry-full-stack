@@ -24,7 +24,7 @@ func main() {
 
 func initSentry() {
 	err := sentry.Init(sentry.ClientOptions{
-		Dsn:              "https://4abfea81f5284ac995bd1557f7fb8560@o4504648733032448.ingest.sentry.io/4504667126497280",
+		Dsn:              "",
 		Debug:            true,
 		AttachStacktrace: true,
 		EnableTracing:    true,
