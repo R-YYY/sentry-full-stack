@@ -1,23 +1,31 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import * as Sentry from "@sentry/browser";
-import { BrowserTracing } from "@sentry/tracing";
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import * as Sentry from "@sentry/browser";
+import { BrowserTracing } from "@sentry/tracing";
+import { uuid4 } from '@sentry/utils';
+
+export const globalStorage = {
+  traceId: ""
+}
 
 Sentry.init({
-  dsn: "https://49d0e621960545d3be74c96f364989ca@o4504648733032448.ingest.sentry.io/4504654757691392",
-
+  dsn: "https://264656342b284cceab7bc7eff390ff26@o4504648733032448.ingest.sentry.io/4504667145371648",
   integrations:[
     new BrowserTracing({
       tracePropagationTargets: ['localhost'],
+      beforeNavigate: context => {
+        globalStorage.traceId = uuid4()
+        return {
+          ...context,
+          traceId: globalStorage.traceId,
+          name: window.location.href,
+        }
+      }
     })
   ],
-
-  // Set tracesSampleRate to 1.0 to capture 100%
-  // of transactions for performance monitoring.
-  // We recommend adjusting this value in production
   tracesSampleRate: 1.0,
 });
 
